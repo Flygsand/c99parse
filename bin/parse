@@ -1,0 +1,35 @@
+#!/bin/env ruby
+
+$:.unshift File.join(File.dirname(__FILE__), '..', 'lib')
+require 'parser'
+
+def eat_leading_whitespace(io)
+  c = nil
+  begin
+    c = io.getc
+  end while c && c.chomp.strip.empty?
+
+  if c
+    pos = io.pos
+    io.ungetc(c)
+    io.pos = (pos - 1)
+  end
+
+  io
+end
+
+if ($0 == __FILE__)
+  usage = "usage: ruby #{__FILE__} source-file"
+  
+  if (!ARGV[0])
+    puts usage
+    exit 1
+  end
+
+  Tempfile.open(File.basename(ARGV[0])) do |io|
+    IO.copy_stream(IO.popen(['gcc', '-w', '-P', '-E', ARGV[0]]), io)
+    io.rewind
+
+    p Parser.new.parse_with_debug(eat_leading_whitespace(io))
+  end
+end
